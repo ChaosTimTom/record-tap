@@ -125,10 +125,13 @@
             const songCount = catalogue.getSongsForArtist(artist.id).length;
             const card = document.createElement('div');
             card.className = 'artist-card' + (unlocked ? '' : ' locked');
+
+            const coverMarkup = artist.coverImage
+                ? `<img class="artist-cover" src="${encodeURI(artist.coverImage)}" alt="${escapeHtml(artist.name)} cover">`
+                : `<div class="artist-avatar" style="background: linear-gradient(135deg, ${artist.color}, ${artist.color}88);">${artist.emoji}</div>`;
+
             card.innerHTML = `
-                <div class="artist-avatar" style="background: linear-gradient(135deg, ${artist.color}, ${artist.color}88);">
-                    ${artist.emoji}
-                </div>
+                ${coverMarkup}
                 <div class="artist-name">${escapeHtml(artist.name)}</div>
                 <div class="artist-songs-count">${songCount} songs</div>
                 ${!unlocked ? `

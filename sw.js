@@ -1,15 +1,15 @@
-const CACHE_NAME = 'recordtap-v25';
+const CACHE_NAME = 'recordtap-v26';
 const ASSETS = [
     '/',
     '/index.html',
-    '/css/style.css?v=25',
-    '/js/audio.js?v=25',
-    '/js/beatmap.js?v=25',
-    '/js/singer.js?v=25',
-    '/js/catalogue.js?v=25',
-    '/js/game.js?v=25',
-    '/js/screens.js?v=25',
-    '/js/app.js?v=25',
+    '/css/style.css?v=26',
+    '/js/audio.js?v=26',
+    '/js/beatmap.js?v=26',
+    '/js/singer.js?v=26',
+    '/js/catalogue.js?v=26',
+    '/js/game.js?v=26',
+    '/js/screens.js?v=26',
+    '/js/app.js?v=26',
     '/manifest.json',
 ];
 
