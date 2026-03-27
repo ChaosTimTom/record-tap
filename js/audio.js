@@ -114,11 +114,14 @@ class AudioEngine {
         const stemNames = ['vocals', 'drums', 'bass', 'other'];
         this.stemBuffers = {};
         const loads = stemNames.map(async name => {
-            try {
-                const url = `${stemDir}/${name}.wav`;
-                this.stemBuffers[name] = await this.loadAudio(url);
-            } catch (e) {
-                console.warn(`[Audio] Failed to load stem ${name}:`, e);
+            const candidates = [`${stemDir}/${name}.mp3`, `${stemDir}/${name}.wav`];
+            for (const url of candidates) {
+                try {
+                    this.stemBuffers[name] = await this.loadAudio(url);
+                    return;
+                } catch (e) {
+                    console.warn(`[Audio] Failed to load stem ${name} from ${url}:`, e);
+                }
             }
         });
         await Promise.all(loads);

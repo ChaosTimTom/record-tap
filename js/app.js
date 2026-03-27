@@ -27,13 +27,13 @@
     // Settings
     let settings = loadSettings();
     let calibrationState = null;
-    const assetBaseUrl = (window.RECORD_TAP_ASSET_BASE_URL || '').trim().replace(/\/+$/, '');
+    const mediaBaseUrl = (window.RECORD_TAP_ASSET_BASE_URL || '').trim().replace(/\/+$/, '');
 
-    function resolveAssetUrl(path) {
+    function resolveMediaUrl(path) {
         if (!path) return path;
         if (/^https?:\/\//i.test(path)) return path;
         const cleanPath = path.replace(/^\/+/, '');
-        return assetBaseUrl ? `${assetBaseUrl}/${cleanPath}` : cleanPath;
+        return mediaBaseUrl ? `${mediaBaseUrl}/${cleanPath}` : cleanPath;
     }
 
     function handleGameLoadFailure(song, error) {
@@ -41,9 +41,9 @@
         game.stop();
         document.getElementById('hud-notes').textContent = 'Load failed';
 
-        const message = assetBaseUrl
-            ? 'Song files failed to load from the configured asset host. Check that the hosted WAV, JSON, and stems paths exist.'
-            : 'Song audio is not deployed with this Vercel site. Configure window.RECORD_TAP_ASSET_BASE_URL in index.html to point at hosted songs and stems.';
+        const message = mediaBaseUrl
+            ? 'Song files failed to load from the media CDN. Check that the hosted MP3 songs and MP3 stems were pushed to the media branch.'
+            : 'Song audio is not configured. Set window.RECORD_TAP_ASSET_BASE_URL to the media CDN branch.';
 
         setTimeout(() => {
             alert(message);
@@ -341,7 +341,7 @@
 
             const instLabel = selectedInstrument || 'mix';
             let useStemsMode = false;
-            const resolvedAudioFile = song.audioFile ? resolveAssetUrl(song.audioFile) : null;
+            const resolvedAudioFile = song.audioFile ? resolveMediaUrl(song.audioFile) : null;
 
             // Show loading in HUD
             document.getElementById('hud-score').textContent = '0';
@@ -352,13 +352,13 @@
             document.getElementById('hud-notes').textContent = 'Loading...';
 
             // Derive stem directory from audio filename
-            const filename = song.audioFile.replace(/^.*\//, '').replace(/\.wav$/i, '');
+            const filename = song.audioFile.replace(/^.*\//, '').replace(/\.[^.]+$/i, '');
 
             // Load stems for instrument-specific mode
             if (instLabel !== 'mix' && audio.canUseStems()) {
                 try {
                     audio.setupStemGains();
-                    await audio.loadStems(resolveAssetUrl(`stems/${filename}`));
+                    await audio.loadStems(resolveMediaUrl(`stems/${filename}`));
                     useStemsMode = true;
                     console.log(`[RecordTap] Stems loaded for "${filename}"`);
                 } catch (e) {
@@ -383,12 +383,12 @@
 
             // Load prebuilt chart (offline-generated); fallback to legacy analysis path
             let notes = null;
-            if (resolvedAudioFile) {
-                const chart = await beatMaps.loadChart(resolvedAudioFile);
+            if (song.audioFile) {
+                const chart = await beatMaps.loadChart(song.audioFile);
                 if (chart) {
                     notes = beatMaps.getChartNotes(song.id, chart, diff.id, instLabel);
                 } else {
-                    const analysis = await beatMaps.loadAnalysis(resolvedAudioFile);
+                    const analysis = await beatMaps.loadAnalysis(song.audioFile);
                     if (analysis) {
                         notes = beatMaps.generateFromAnalysis(song.id, analysis, diff, instLabel);
                     } else {
@@ -399,7 +399,7 @@
             } else {
                 notes = beatMaps.generateFromBPM(song.id, song.bpm, song.duration, diff);
             }
-            console.log(`[RecordTap v24] ${instLabel} / ${diff.id}: ${notes.length} notes | stems: ${useStemsMode}`);
+            console.log(`[RecordTap v25] ${instLabel} / ${diff.id}: ${notes.length} notes | stems: ${useStemsMode}`);
 
             // Set singer color from artist
             const artist = catalogue.getArtist(song.artistId);
@@ -453,7 +453,7 @@
             }, 100);
 
             const modeLabel = useStemsMode ? 'STEM' : 'MIX';
-            document.getElementById('hud-notes').textContent = `v24 | ${instLabel} [${modeLabel}] | ${notes.length} notes`;
+            document.getElementById('hud-notes').textContent = `v25 | ${instLabel} [${modeLabel}] | ${notes.length} notes`;
 
             const unlocked = await audio.resume();
             if (!unlocked) {

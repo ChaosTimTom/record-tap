@@ -28,6 +28,14 @@ class BeatMapManager {
         this.chartCache = {};
     }
 
+    sidecarPath(audioFilePath, extension) {
+        if (!audioFilePath) return audioFilePath;
+        if (/\.[a-z0-9]+$/i.test(audioFilePath)) {
+            return audioFilePath.replace(/\.[a-z0-9]+$/i, extension);
+        }
+        return `${audioFilePath}${extension}`;
+    }
+
     register(songId, beatMap) {
         this.maps[songId] = beatMap;
     }
@@ -40,7 +48,7 @@ class BeatMapManager {
 
     async loadAnalysis(audioFilePath) {
         if (this.analysisCache[audioFilePath]) return this.analysisCache[audioFilePath];
-        const jsonPath = audioFilePath.replace(/\.wav$/i, '.json');
+        const jsonPath = this.sidecarPath(audioFilePath, '.json');
         try {
             const resp = await fetch(jsonPath);
             if (!resp.ok) return null;
@@ -55,7 +63,7 @@ class BeatMapManager {
 
     async loadChart(audioFilePath) {
         if (this.chartCache[audioFilePath]) return this.chartCache[audioFilePath];
-        const chartPath = audioFilePath.replace(/\.wav$/i, '.chart.json');
+        const chartPath = this.sidecarPath(audioFilePath, '.chart.json');
         try {
             const resp = await fetch(chartPath);
             if (!resp.ok) return null;
