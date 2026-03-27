@@ -27,6 +27,30 @@
     // Settings
     let settings = loadSettings();
     let calibrationState = null;
+    const assetBaseUrl = (window.RECORD_TAP_ASSET_BASE_URL || '').trim().replace(/\/+$/, '');
+
+    function resolveAssetUrl(path) {
+        if (!path) return path;
+        if (/^https?:\/\//i.test(path)) return path;
+        const cleanPath = path.replace(/^\/+/, '');
+        return assetBaseUrl ? `${assetBaseUrl}/${cleanPath}` : cleanPath;
+    }
+
+    function handleGameLoadFailure(song, error) {
+        console.error('[RecordTap] Game load failed:', error);
+        game.stop();
+        document.getElementById('hud-notes').textContent = 'Load failed';
+
+        const message = assetBaseUrl
+            ? 'Song files failed to load from the configured asset host. Check that the hosted WAV, JSON, and stems paths exist.'
+            : 'Song audio is not deployed with this Vercel site. Configure window.RECORD_TAP_ASSET_BASE_URL in index.html to point at hosted songs and stems.';
+
+        setTimeout(() => {
+            alert(message);
+            screens.show('screen-difficulty');
+            if (song) renderDifficultyList(song);
+        }, 50);
+    }
 
     // ===== LOADING =====
     window.addEventListener('load', () => {
@@ -311,141 +335,141 @@
 
     // ===== GAMEPLAY =====
     async function startGame(song, diff) {
-        screens.show('screen-game');
-        game.resizeCanvas();
+        try {
+            screens.show('screen-game');
+            game.resizeCanvas();
 
-        const instLabel = selectedInstrument || 'mix';
-        let useStemsMode = false;
+            const instLabel = selectedInstrument || 'mix';
+            let useStemsMode = false;
+            const resolvedAudioFile = song.audioFile ? resolveAssetUrl(song.audioFile) : null;
 
-        // Show loading in HUD
-        document.getElementById('hud-score').textContent = '0';
-        document.getElementById('hud-combo').textContent = '';
-        document.getElementById('hud-progress').style.width = '0%';
-        document.getElementById('hud-overdrive').style.width = '0%';
-        document.getElementById('btn-overdrive').classList.remove('ready', 'active');
-        document.getElementById('hud-notes').textContent = 'Loading...';
+            // Show loading in HUD
+            document.getElementById('hud-score').textContent = '0';
+            document.getElementById('hud-combo').textContent = '';
+            document.getElementById('hud-progress').style.width = '0%';
+            document.getElementById('hud-overdrive').style.width = '0%';
+            document.getElementById('btn-overdrive').classList.remove('ready', 'active');
+            document.getElementById('hud-notes').textContent = 'Loading...';
 
-        // Derive stem directory from audio filename
-        const filename = song.audioFile.replace(/^.*\//, '').replace(/\.wav$/i, '');
+            // Derive stem directory from audio filename
+            const filename = song.audioFile.replace(/^.*\//, '').replace(/\.wav$/i, '');
 
-        // Load stems for instrument-specific mode
-        if (instLabel !== 'mix' && audio.canUseStems()) {
-            try {
-                audio.setupStemGains();
-                await audio.loadStems(`stems/${filename}`);
-                useStemsMode = true;
-                console.log(`[RecordTap] Stems loaded for "${filename}"`);
-            } catch (e) {
-                console.warn('[RecordTap] Stem loading failed, using mix fallback:', e);
-            }
-        } else if (instLabel !== 'mix') {
-            console.log('[RecordTap] iOS-safe mode: using mix playback instead of stems.');
-        }
-
-        // Load mix audio (fallback + duration reference)
-        let audioBuffer;
-        if (song.audioFile) {
-            if (audio.isIOS && !useStemsMode) {
-                // iOS reliability path: stream with HTMLAudioElement instead of full decode.
-                audioBuffer = song.audioFile;
-            } else {
-                audioBuffer = await audio.loadAudio(song.audioFile);
-            }
-        } else {
-            audioBuffer = audio.generateDemoTrack(song.duration, song.bpm);
-        }
-
-        // Load prebuilt chart (offline-generated); fallback to legacy analysis path
-        let notes = null;
-        if (song.audioFile) {
-            const chart = await beatMaps.loadChart(song.audioFile);
-            if (chart) {
-                notes = beatMaps.getChartNotes(song.id, chart, diff.id, instLabel);
-            } else {
-                const analysis = await beatMaps.loadAnalysis(song.audioFile);
-                if (analysis) {
-                    notes = beatMaps.generateFromAnalysis(song.id, analysis, diff, instLabel);
-                } else {
-                    notes = beatMaps.generateFromBPM(song.id, song.bpm, song.duration, diff);
+            // Load stems for instrument-specific mode
+            if (instLabel !== 'mix' && audio.canUseStems()) {
+                try {
+                    audio.setupStemGains();
+                    await audio.loadStems(resolveAssetUrl(`stems/${filename}`));
+                    useStemsMode = true;
+                    console.log(`[RecordTap] Stems loaded for "${filename}"`);
+                } catch (e) {
+                    console.warn('[RecordTap] Stem loading failed, using mix fallback:', e);
                 }
-                console.warn('[RecordTap] Missing prebuilt chart, used legacy generation path.');
+            } else if (instLabel !== 'mix') {
+                console.log('[RecordTap] iOS-safe mode: using mix playback instead of stems.');
             }
-        } else {
-            notes = beatMaps.generateFromBPM(song.id, song.bpm, song.duration, diff);
-        }
-        console.log(`[RecordTap v23] ${instLabel} / ${diff.id}: ${notes.length} notes | stems: ${useStemsMode}`);
 
-        // Set singer color from artist
-        const artist = catalogue.getArtist(song.artistId);
-        if (artist) singer.setColor(artist.color);
-
-        // Apply settings
-        game.noteSpeed = settings.noteSpeed;
-        game.timingOffset = settings.timingOffset;
-        audio.setMusicVolume(settings.musicVolume / 100);
-        audio.setSfxVolume(settings.sfxVolume / 100);
-
-        // Set up callbacks
-        game.onScoreChange = (score, combo) => {
-            document.getElementById('hud-score').textContent = score.toLocaleString();
-            const comboEl = document.getElementById('hud-combo');
-            if (combo >= 5) {
-                comboEl.textContent = combo + 'x COMBO';
+            // Load mix audio (fallback + duration reference)
+            let audioBuffer;
+            if (resolvedAudioFile) {
+                if (audio.isIOS && !useStemsMode) {
+                    // iOS reliability path: stream with HTMLAudioElement instead of full decode.
+                    audioBuffer = resolvedAudioFile;
+                } else {
+                    audioBuffer = await audio.loadAudio(resolvedAudioFile);
+                }
             } else {
-                comboEl.textContent = '';
+                audioBuffer = audio.generateDemoTrack(song.duration, song.bpm);
             }
-        };
 
-        game.onOverdriveChange = ({ meter, active }) => {
-            document.getElementById('hud-overdrive').style.width = `${Math.round(meter * 100)}%`;
-            const odBtn = document.getElementById('btn-overdrive');
-            odBtn.classList.toggle('active', active);
-            odBtn.classList.toggle('ready', !active && meter >= 0.5);
-        };
-
-        game.onHit = (type) => {
-            showHitFeedback(type);
-            if (type === 'miss') {
-                // Duck the player's instrument stem — missing feels impactful
-                if (useStemsMode) audio.duckStem(instLabel);
+            // Load prebuilt chart (offline-generated); fallback to legacy analysis path
+            let notes = null;
+            if (resolvedAudioFile) {
+                const chart = await beatMaps.loadChart(resolvedAudioFile);
+                if (chart) {
+                    notes = beatMaps.getChartNotes(song.id, chart, diff.id, instLabel);
+                } else {
+                    const analysis = await beatMaps.loadAnalysis(resolvedAudioFile);
+                    if (analysis) {
+                        notes = beatMaps.generateFromAnalysis(song.id, analysis, diff, instLabel);
+                    } else {
+                        notes = beatMaps.generateFromBPM(song.id, song.bpm, song.duration, diff);
+                    }
+                    console.warn('[RecordTap] Missing prebuilt chart, used legacy generation path.');
+                }
             } else {
-                // Restore stem on any successful hit
-                if (useStemsMode) audio.restoreStem(instLabel);
-                singer.update(audio.getCurrentTime(), song.bpm, true);
+                notes = beatMaps.generateFromBPM(song.id, song.bpm, song.duration, diff);
             }
-        };
+            console.log(`[RecordTap v24] ${instLabel} / ${diff.id}: ${notes.length} notes | stems: ${useStemsMode}`);
 
-        game.onComplete = (results) => {
-            showResults(results);
-        };
+            // Set singer color from artist
+            const artist = catalogue.getArtist(song.artistId);
+            if (artist) singer.setColor(artist.color);
 
-        // Update progress bar
-        const progressLoop = setInterval(() => {
-            if (!game.isRunning) {
-                clearInterval(progressLoop);
-                return;
+            // Apply settings
+            game.noteSpeed = settings.noteSpeed;
+            game.timingOffset = settings.timingOffset;
+            audio.setMusicVolume(settings.musicVolume / 100);
+            audio.setSfxVolume(settings.sfxVolume / 100);
+
+            // Set up callbacks
+            game.onScoreChange = (score, combo) => {
+                document.getElementById('hud-score').textContent = score.toLocaleString();
+                const comboEl = document.getElementById('hud-combo');
+                if (combo >= 5) {
+                    comboEl.textContent = combo + 'x COMBO';
+                } else {
+                    comboEl.textContent = '';
+                }
+            };
+
+            game.onOverdriveChange = ({ meter, active }) => {
+                document.getElementById('hud-overdrive').style.width = `${Math.round(meter * 100)}%`;
+                const odBtn = document.getElementById('btn-overdrive');
+                odBtn.classList.toggle('active', active);
+                odBtn.classList.toggle('ready', !active && meter >= 0.5);
+            };
+
+            game.onHit = (type) => {
+                showHitFeedback(type);
+                if (type === 'miss') {
+                    if (useStemsMode) audio.duckStem(instLabel);
+                } else {
+                    if (useStemsMode) audio.restoreStem(instLabel);
+                    singer.update(audio.getCurrentTime(), song.bpm, true);
+                }
+            };
+
+            game.onComplete = (results) => {
+                showResults(results);
+            };
+
+            const progressLoop = setInterval(() => {
+                if (!game.isRunning) {
+                    clearInterval(progressLoop);
+                    return;
+                }
+                const progress = audio.getCurrentTime() / (audio.getDuration() || song.duration);
+                document.getElementById('hud-progress').style.width = Math.min(100, progress * 100) + '%';
+            }, 100);
+
+            const modeLabel = useStemsMode ? 'STEM' : 'MIX';
+            document.getElementById('hud-notes').textContent = `v24 | ${instLabel} [${modeLabel}] | ${notes.length} notes`;
+
+            const unlocked = await audio.resume();
+            if (!unlocked) {
+                throw new Error('Audio context is blocked. Tap screen and retry.');
             }
-            const progress = audio.getCurrentTime() / (audio.getDuration() || song.duration);
-            document.getElementById('hud-progress').style.width = Math.min(100, progress * 100) + '%';
-        }, 100);
 
-        // Update HUD
-        const modeLabel = useStemsMode ? 'STEM' : 'MIX';
-        document.getElementById('hud-notes').textContent = `v23 | ${instLabel} [${modeLabel}] | ${notes.length} notes`;
-
-        // Start playback — stems for instrument mode, mix for full-mix mode
-        const unlocked = await audio.resume();
-        if (!unlocked) {
-            throw new Error('Audio context is blocked. Tap screen and retry.');
+            if (useStemsMode) {
+                await audio.playStems();
+            } else {
+                await audio.playMusic(audioBuffer);
+            }
+            requestWakeLock();
+            game.start(song, notes, diff);
+        } catch (error) {
+            handleGameLoadFailure(song, error);
         }
-
-        if (useStemsMode) {
-            await audio.playStems();
-        } else {
-            await audio.playMusic(audioBuffer);
-        }
-        requestWakeLock();
-        game.start(song, notes, diff);
     }
 
     document.getElementById('btn-overdrive').addEventListener('click', () => {

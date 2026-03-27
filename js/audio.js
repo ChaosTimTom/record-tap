@@ -169,6 +169,9 @@ class AudioEngine {
     async loadAudio(url) {
         if (this.audioBufferCache[url]) return this.audioBufferCache[url];
         const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch audio: ${url} (${response.status})`);
+        }
         const arrayBuffer = await response.arrayBuffer();
         const audioBuffer = await this.ctx.decodeAudioData(arrayBuffer);
         this.audioBufferCache[url] = audioBuffer;
