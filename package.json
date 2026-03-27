@@ -1,0 +1,10 @@
+{
+  "name": "record-tap",
+  "version": "1.0.0",
+  "description": "A mobile rhythm game - tap to the beat of curated artist catalogues",
+  "scripts": {
+    "dev": "npx serve . -p 3000 -s",
+    "build": "echo 'Static site - no build needed'"
+  },
+  "private": true
+}

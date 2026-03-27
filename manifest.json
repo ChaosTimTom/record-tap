@@ -1,0 +1,22 @@
+{
+    "name": "Record Tap",
+    "short_name": "RecordTap",
+    "description": "A mobile rhythm game - tap to the beat!",
+    "start_url": "/",
+    "display": "fullscreen",
+    "orientation": "portrait",
+    "background_color": "#0a0014",
+    "theme_color": "#0a0014",
+    "icons": [
+        {
+            "src": "icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

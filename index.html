@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0a0014">
+    <title>Record Tap</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Chakra+Petch:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css?v=24">
+</head>
+<body>
+    <div id="app">
+        <!-- LOADING SCREEN -->
+        <div id="screen-loading" class="screen active">
+            <div class="loading-content">
+                <h1 class="game-logo">RECORD<span>TAP</span></h1>
+                <div class="loading-bar-container">
+                    <div class="loading-bar" id="loading-bar"></div>
+                </div>
+                <p class="loading-text">Loading...</p>
+            </div>
+        </div>
+
+        <!-- MAIN MENU -->
+        <div id="screen-menu" class="screen">
+            <div class="menu-bg"></div>
+            <div class="menu-content">
+                <h1 class="game-logo large">RECORD<span>TAP</span></h1>
+                <div class="menu-buttons">
+                    <button class="btn btn-primary" id="btn-play">PLAY</button>
+                    <button class="btn btn-secondary" id="btn-catalogue">CATALOGUE</button>
+                    <button class="btn btn-secondary" id="btn-settings">SETTINGS</button>
+                </div>
+                <div class="menu-stats">
+                    <div class="stat"><span id="stat-stars">0</span> ★</div>
+                    <div class="stat"><span id="stat-unlocked">0</span> Songs Unlocked</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ARTIST SELECT -->
+        <div id="screen-artists" class="screen">
+            <div class="screen-header">
+                <button class="btn-back" id="btn-back-artists">◄</button>
+                <h2>SELECT ARTIST</h2>
+                <div class="header-stars">★ <span id="artist-stars">0</span></div>
+            </div>
+            <div class="artist-grid" id="artist-grid">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+
+        <!-- SONG SELECT -->
+        <div id="screen-songs" class="screen">
+            <div class="screen-header">
+                <button class="btn-back" id="btn-back-songs">◄</button>
+                <h2 id="songs-artist-name">ARTIST</h2>
+                <div class="header-stars">★ <span id="song-stars">0</span></div>
+            </div>
+            <div class="song-list" id="song-list">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+
+        <!-- CATALOGUE / UNLOCK SCREEN -->
+        <div id="screen-catalogue" class="screen">
+            <div class="screen-header">
+                <button class="btn-back" id="btn-back-catalogue">◄</button>
+                <h2>CATALOGUE</h2>
+                <div class="header-stars">★ <span id="catalogue-stars">0</span></div>
+            </div>
+            <div class="catalogue-list" id="catalogue-list">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+
+        <!-- DIFFICULTY SELECT -->
+        <div id="screen-difficulty" class="screen">
+            <div class="screen-header">
+                <button class="btn-back" id="btn-back-difficulty">◄</button>
+                <h2 id="diff-song-name">SELECT DIFFICULTY</h2>
+            </div>
+            <div class="difficulty-list" id="difficulty-list">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+
+        <!-- INSTRUMENT SELECT -->
+        <div id="screen-instrument" class="screen">
+            <div class="screen-header">
+                <button class="btn-back" id="btn-back-instrument">◄</button>
+                <h2 id="inst-song-name">PICK YOUR PART</h2>
+            </div>
+            <div class="instrument-list" id="instrument-list">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+
+        <!-- GAMEPLAY SCREEN -->
+        <div id="screen-game" class="screen">
+            <canvas id="game-canvas"></canvas>
+            <div class="game-hud">
+                <div class="hud-left">
+                    <div class="score" id="hud-score">0</div>
+                    <div class="combo" id="hud-combo"></div>
+                    <div class="note-count" id="hud-notes" style="font-size:0.6rem;opacity:0.5;margin-top:2px;"></div>
+                </div>
+                <div class="hud-center">
+                    <div class="song-progress-bar">
+                        <div class="song-progress-fill" id="hud-progress"></div>
+                    </div>
+                    <div class="overdrive-wrap">
+                        <div class="overdrive-label">OVERDRIVE</div>
+                        <div class="overdrive-meter">
+                            <div class="overdrive-fill" id="hud-overdrive"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="hud-right">
+                    <button class="btn-activate" id="btn-overdrive">OD</button>
+                    <button class="btn-pause" id="btn-pause">❚❚</button>
+                </div>
+            </div>
+            <!-- Singer animation overlay -->
+            <div class="singer-container" id="singer-container">
+                <canvas id="singer-canvas" width="200" height="300"></canvas>
+            </div>
+            <!-- Hit feedback -->
+            <div class="hit-feedback" id="hit-feedback"></div>
+        </div>
+
+        <!-- PAUSE OVERLAY -->
+        <div id="screen-pause" class="overlay">
+            <div class="overlay-content">
+                <h2>PAUSED</h2>
+                <button class="btn btn-primary" id="btn-resume">RESUME</button>
+                <button class="btn btn-secondary" id="btn-restart">RESTART</button>
+                <button class="btn btn-danger" id="btn-quit">QUIT</button>
+            </div>
+        </div>
+
+        <!-- RESULTS SCREEN -->
+        <div id="screen-results" class="screen">
+            <div class="results-content">
+                <h2>SONG COMPLETE!</h2>
+                <div class="results-grade" id="results-grade">S</div>
+                <div class="results-stars" id="results-stars">★★★</div>
+                <div class="results-stats">
+                    <div class="result-row"><span>Score</span><span id="result-score">0</span></div>
+                    <div class="result-row"><span>Perfect</span><span id="result-perfect">0</span></div>
+                    <div class="result-row"><span>Great</span><span id="result-great">0</span></div>
+                    <div class="result-row"><span>Good</span><span id="result-good">0</span></div>
+                    <div class="result-row"><span>Missed</span><span id="result-miss">0</span></div>
+                    <div class="result-row"><span>Max Combo</span><span id="result-combo">0</span></div>
+                </div>
+                <div class="results-unlock" id="results-unlock" style="display:none;">
+                    <p>★ <span id="unlock-earned">0</span> stars earned!</p>
+                </div>
+                <div class="results-buttons">
+                    <button class="btn btn-primary" id="btn-retry">RETRY</button>
+                    <button class="btn btn-secondary" id="btn-results-back">BACK</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SETTINGS SCREEN -->
+        <div id="screen-settings" class="screen">
+            <div class="screen-header">
+                <button class="btn-back" id="btn-back-settings">◄</button>
+                <h2>SETTINGS</h2>
+            </div>
+            <div class="settings-list">
+                <div class="setting-item">
+                    <label>Music Volume</label>
+                    <input type="range" id="setting-music" min="0" max="100" value="80">
+                </div>
+                <div class="setting-item">
+                    <label>SFX Volume</label>
+                    <input type="range" id="setting-sfx" min="0" max="100" value="80">
+                </div>
+                <div class="setting-item">
+                    <label>Note Speed</label>
+                    <input type="range" id="setting-speed" min="1" max="10" value="5">
+                </div>
+                <div class="setting-item">
+                    <label>Audio Calibration (ms)</label>
+                    <input type="range" id="setting-offset" min="-200" max="200" value="0">
+                    <span id="offset-value">0</span>
+                    <div class="setting-hint">If notes feel early, slide right (+). If late, slide left (-).</div>
+                </div>
+                <div class="setting-item">
+                    <button class="btn btn-primary" id="btn-open-calibration">Run Calibration Wizard</button>
+                </div>
+                <div class="setting-item">
+                    <button class="btn btn-secondary" id="btn-reset-progress">Reset Progress</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- CALIBRATION SCREEN -->
+        <div id="screen-calibration" class="screen">
+            <div class="screen-header">
+                <button class="btn-back" id="btn-back-calibration">◄</button>
+                <h2>CALIBRATION</h2>
+            </div>
+            <div class="calibration-content">
+                <p class="calibration-instructions" id="calibration-instructions">Press START, then tap the pad in time with the click for 8 beats.</p>
+                <div class="calibration-pulse" id="calibration-pulse"></div>
+                <button class="btn btn-primary" id="btn-calibration-start">START</button>
+                <button class="btn btn-secondary" id="btn-calibration-tap">TAP</button>
+                <div class="calibration-readout" id="calibration-readout">Offset: 0 ms</div>
+                <button class="btn btn-secondary" id="btn-calibration-apply" disabled>Apply Result</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/audio.js?v=24"></script>
+    <script src="js/beatmap.js?v=24"></script>
+    <script src="js/singer.js?v=24"></script>
+    <script src="js/catalogue.js?v=24"></script>
+    <script src="js/game.js?v=24"></script>
+    <script src="js/screens.js?v=24"></script>
+    <script src="js/app.js?v=24"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(() => {});
+        }
+    </script>
+</body>
+</html>
